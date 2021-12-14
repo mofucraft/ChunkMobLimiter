@@ -38,6 +38,7 @@ public class ChunkMobLimiterConfig {
 
     public ChunkMobLimiterConfig() {
         instance = ChunkMobLimiter.getInstance();
+        instance.saveDefaultConfig();
         instance.reloadConfig();
     }
 
