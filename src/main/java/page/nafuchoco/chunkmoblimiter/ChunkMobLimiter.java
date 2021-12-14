@@ -19,7 +19,7 @@ package page.nafuchoco.chunkmoblimiter;
 import lombok.val;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Mob;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityBreedEvent;
@@ -30,50 +30,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Set;
-
-import static org.bukkit.entity.EntityType.*;
 
 public final class ChunkMobLimiter extends JavaPlugin implements Listener {
-    // リミット対象にしないもの
-    private static final Set<EntityType> EXCLUDE_ENTITY = Set.of(
-            DROPPED_ITEM,
-            EXPERIENCE_ORB,
-            AREA_EFFECT_CLOUD,
-            PAINTING,
-            ARROW,
-            SNOWBALL,
-            FIREBALL,
-            SMALL_FIREBALL,
-            ENDER_PEARL,
-            ENDER_SIGNAL,
-            SPLASH_POTION,
-            THROWN_EXP_BOTTLE,
-            ITEM_FRAME,
-            WITHER_SKULL,
-            PRIMED_TNT,
-            FALLING_BLOCK,
-            FIREWORK,
-            SPECTRAL_ARROW,
-            SHULKER_BULLET,
-            DRAGON_FIREBALL,
-            ARMOR_STAND,
-            EVOKER_FANGS,
-            BOAT,
-            MINECART,
-            MINECART_CHEST,
-            MINECART_FURNACE,
-            MINECART_TNT,
-            MINECART_HOPPER,
-            MINECART_MOB_SPAWNER,
-            ENDER_CRYSTAL,
-            TRIDENT,
-            GLOW_ITEM_FRAME,
-            FISHING_HOOK,
-            LIGHTNING,
-            PLAYER
-    );
-
     private static ChunkMobLimiter instance;
     private ChunkMobLimiterConfig config;
 
@@ -132,18 +90,27 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
         val chunk = entity.getLocation().getChunk();
         var limitConfig = config.getLimits().get(entityType.toString());
 
-        // エンティティが除外対象の場合falseを返す
-        // または エンティティが属するワールドが除外対象の場合は常時falseを返す
-        if (EXCLUDE_ENTITY.contains(entityType)
-                || config.getExcludeWorld().contains(chunk.getWorld().getName()))
+        // エンティティがMob以外の場合falseを返す
+        // または エンティティが属するワールドがターゲット以外の場合は常時falseを返す
+        if (entity instanceof Mob
+                || !config.getTargetWorld().contains(chunk.getWorld().getName()))
             return false;
 
-        // 個別リミットの設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
-        if (limitConfig == null)
+        // 個別リミットの設定がない場合、エンティティクラスグループからリミット値の一番小さいものを取得する
+        if (limitConfig == null) {
+            limitConfig = config.getEntityGroupLimits().stream()
+                    .filter(limit -> getEntityClass(limit.getEntityType()).isInstance(entity))
+                    .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
+                    .findFirst().orElse(null);
+        }
+
+        // 個別リミット設定，エンティティクラスグループ設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
+        if (limitConfig == null) {
             limitConfig = config.getGroupLimits().stream()
                     .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
                     .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
                     .findFirst().orElse(null);
+        }
 
         // いずれのリミット設定もない場合はデフォルトを適用する
         if (limitConfig == null)
@@ -155,7 +122,7 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
 
         // チャンク内の対象となるエンティティの数を計算する
         var targetEntityInChunkNumber = Arrays.stream(chunk.getEntities())
-                .filter(target -> !EXCLUDE_ENTITY.contains(target.getType()))
+                .filter(Mob.class::isInstance)
                 .count();
 
         // チャンク内にリミット数以上エンティティが存在する場合trueを返す
@@ -164,5 +131,17 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
 
         // いずれにも当てはまらない場合false
         return false;
+    }
+
+    private Class getEntityClass(String classname) {
+        String name = classname;
+        if (classname.startsWith("$"))
+            name = classname.substring(1);
+
+        try {
+            return Class.forName("org.bukkit.entity." + name);
+        } catch (ClassNotFoundException e) {
+            return null;
+        }
     }
 }

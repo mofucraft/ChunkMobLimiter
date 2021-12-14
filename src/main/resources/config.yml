@@ -8,8 +8,8 @@ properties:
   # 繁殖によるMobスポーンを制限する
   limitBreeding: false
 
-  # リミット対象から除外するワールド
-  excludeWorld: [ ]
+  # リミット対象にするワールド
+  targetWorld: [ ]
 
 # エンティティごとの1チャンクあたりの制限設定
 limits:

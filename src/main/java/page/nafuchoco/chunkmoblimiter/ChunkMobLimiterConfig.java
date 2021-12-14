@@ -30,7 +30,7 @@ public class ChunkMobLimiterConfig {
     private boolean checkChunkLoad = false;
     private boolean checkChunkUnload = false;
     private boolean limitBreeding = false;
-    private List<String> excludeWorld = new ArrayList<>();
+    private List<String> targetWorld = new ArrayList<>();
     private Map<String, LimitConfig> limits = new HashMap<>();
 
     private ChunkMobLimiter instance;
@@ -47,7 +47,7 @@ public class ChunkMobLimiterConfig {
         checkChunkLoad = config.getBoolean("properties.checkChunkLoad", false);
         checkChunkUnload = config.getBoolean("properties.checkChunkUnload", false);
         limitBreeding = config.getBoolean("properties.limitBreeding", false);
-        excludeWorld = config.getStringList("excludeWorld");
+        targetWorld = config.getStringList("targetWorld");
 
         val limitSection = config.getConfigurationSection("limits");
         limits = LimitConfig.parseLimitConfig(limitSection).stream()
@@ -69,8 +69,8 @@ public class ChunkMobLimiterConfig {
         return limitBreeding;
     }
 
-    public List<String> getExcludeWorld() {
-        return excludeWorld;
+    public List<String> getTargetWorld() {
+        return targetWorld;
     }
 
     public Map<String, LimitConfig> getLimits() {
@@ -79,6 +79,10 @@ public class ChunkMobLimiterConfig {
 
     public List<LimitConfig> getGroupLimits() {
         return limits.values().stream().filter(LimitConfig::isGroup).collect(Collectors.toList());
+    }
+
+    public List<LimitConfig> getEntityGroupLimits() {
+        return limits.values().stream().filter(limit -> limit.getEntityType().startsWith("$")).collect(Collectors.toList());
     }
 
 
