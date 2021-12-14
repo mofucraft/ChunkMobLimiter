@@ -25,3 +25,5 @@ limits:
       - SKELETON
       - CREEPER
       - SPIDER
+
+debug: false

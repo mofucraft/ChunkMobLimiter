@@ -32,6 +32,7 @@ public class ChunkMobLimiterConfig {
     private boolean limitBreeding = false;
     private List<String> targetWorld = new ArrayList<>();
     private Map<String, LimitConfig> limits = new HashMap<>();
+    private boolean debug = false;
 
     private ChunkMobLimiter instance;
     private FileConfiguration config;
@@ -39,16 +40,18 @@ public class ChunkMobLimiterConfig {
     public ChunkMobLimiterConfig() {
         instance = ChunkMobLimiter.getInstance();
         instance.saveDefaultConfig();
-        instance.reloadConfig();
+        reloadConfig();
     }
 
     public void reloadConfig() {
+        instance.reloadConfig();
         config = instance.getConfig();
 
         checkChunkLoad = config.getBoolean("properties.checkChunkLoad", false);
         checkChunkUnload = config.getBoolean("properties.checkChunkUnload", false);
         limitBreeding = config.getBoolean("properties.limitBreeding", false);
-        targetWorld = config.getStringList("targetWorld");
+        targetWorld = config.getStringList("properties.targetWorld");
+        debug = config.getBoolean("debug", false);
 
         val limitSection = config.getConfigurationSection("limits");
         limits = LimitConfig.parseLimitConfig(limitSection).stream()
@@ -86,6 +89,24 @@ public class ChunkMobLimiterConfig {
         return limits.values().stream().filter(limit -> limit.getEntityType().startsWith("$")).collect(Collectors.toList());
     }
 
+    public boolean isDebug() {
+        return debug;
+    }
+
+    public void setDebug(boolean debug) {
+        this.debug = debug;
+    }
+
+    @Override
+    public String toString() {
+        return "ChunkMobLimiterConfig{" +
+                "checkChunkLoad=" + checkChunkLoad +
+                ", checkChunkUnload=" + checkChunkUnload +
+                ", limitBreeding=" + limitBreeding +
+                ", targetWorld=" + targetWorld +
+                ", limits=" + limits +
+                '}';
+    }
 
     public static class LimitConfig {
         private String entityType;
@@ -94,12 +115,12 @@ public class ChunkMobLimiterConfig {
         private List<String> groupEntityList;
 
         public static List<LimitConfig> parseLimitConfig(ConfigurationSection section) {
-            val path = section.getName();
+            val path = section.getCurrentPath();
             return section.getKeys(false).stream()
                     .map(key -> {
-                        val groupList = section.getStringList(path + "." + key + ".entities");
+                        val groupList = section.getStringList(key + ".entities");
                         val group = !groupList.isEmpty();
-                        val limit = section.getInt(path + "." + key + ".limit", -1);
+                        val limit = section.getInt(key + ".limit", -1);
                         return new LimitConfig(key, group, limit, groupList);
                     })
                     .collect(Collectors.toList());
@@ -126,6 +147,16 @@ public class ChunkMobLimiterConfig {
 
         public List<String> getGroupEntityList() {
             return groupEntityList;
+        }
+
+        @Override
+        public String toString() {
+            return "LimitConfig{" +
+                    "entityType='" + entityType + '\'' +
+                    ", group=" + group +
+                    ", limit=" + limit +
+                    ", groupEntityList=" + groupEntityList +
+                    '}';
         }
     }
 }

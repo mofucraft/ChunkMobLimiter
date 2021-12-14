@@ -45,12 +45,15 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
     public void onEnable() {
         // Plugin startup logic
         config = new ChunkMobLimiterConfig();
+        getLogger().info("Config Loaded! " + config.toString());
         getServer().getPluginManager().registerEvents(this, this);
     }
 
     @EventHandler
     public void onEntitySpawnEvent(EntitySpawnEvent event) {
         event.setCancelled(checkLimit(event.getEntity()));
+        if (config.isDebug())
+            getLogger().info("[Debug] Entity Spawn Event (isCancelled: " + event.isCancelled() + ")");
     }
 
     @EventHandler
@@ -92,7 +95,7 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
 
         // エンティティがMob以外の場合falseを返す
         // または エンティティが属するワールドがターゲット以外の場合は常時falseを返す
-        if (entity instanceof Mob
+        if (!(entity instanceof Mob)
                 || !config.getTargetWorld().contains(chunk.getWorld().getName()))
             return false;
 
@@ -124,6 +127,13 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
         var targetEntityInChunkNumber = Arrays.stream(chunk.getEntities())
                 .filter(Mob.class::isInstance)
                 .count();
+
+        if (config.isDebug())
+            getLogger().info("[Debug] Check Limit(EntityType:" + entityType
+                    + ", LimitType: " + limitConfig.getEntityType()
+                    + ", Limit: " + limitConfig.getLimit()
+                    + ", ChunkCount: " + targetEntityInChunkNumber
+                    + ", isLimit: " + (targetEntityInChunkNumber > limitConfig.getLimit()) + ")");
 
         // チャンク内にリミット数以上エンティティが存在する場合trueを返す
         if (targetEntityInChunkNumber > limitConfig.getLimit())
