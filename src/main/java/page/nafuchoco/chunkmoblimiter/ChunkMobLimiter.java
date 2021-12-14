@@ -138,13 +138,14 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
             if (config.getExcludeWorld().contains(chunk.getWorld().getName()))
                 return false;
 
-            // 対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
-            limitConfig = config.getGroupLimits().stream()
-                    .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
-                    .sorted(Comparator.comparingInt(group -> group.getLimit()))
-                    .findFirst().orElse(null);
+            // 個別リミットの設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
+            if (limitConfig == null)
+                limitConfig = config.getGroupLimits().stream()
+                        .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
+                        .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
+                        .findFirst().orElse(null);
 
-            // 個別のリミット設定がない場合はデフォルトを適用する
+            // いずれのリミット設定もない場合はデフォルトを適用する
             if (limitConfig == null)
                 limitConfig = config.getLimits().get("default");
 
