@@ -132,36 +132,35 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
         val chunk = entity.getLocation().getChunk();
         var limitConfig = config.getLimits().get(entityType.toString());
 
-        // 除外対象であるかの確認
-        if (!EXCLUDE_ENTITY.contains(entityType)) {
-            // エンティティが属するワールドが除外対象の場合は常時falseを返す
-            if (config.getExcludeWorld().contains(chunk.getWorld().getName()))
-                return false;
+        // エンティティが除外対象の場合falseを返す
+        // または エンティティが属するワールドが除外対象の場合は常時falseを返す
+        if (EXCLUDE_ENTITY.contains(entityType)
+                || config.getExcludeWorld().contains(chunk.getWorld().getName()))
+            return false;
 
-            // 個別リミットの設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
-            if (limitConfig == null)
-                limitConfig = config.getGroupLimits().stream()
-                        .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
-                        .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
-                        .findFirst().orElse(null);
+        // 個別リミットの設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
+        if (limitConfig == null)
+            limitConfig = config.getGroupLimits().stream()
+                    .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
+                    .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
+                    .findFirst().orElse(null);
 
-            // いずれのリミット設定もない場合はデフォルトを適用する
-            if (limitConfig == null)
-                limitConfig = config.getLimits().get("default");
+        // いずれのリミット設定もない場合はデフォルトを適用する
+        if (limitConfig == null)
+            limitConfig = config.getLimits().get("default");
 
-            // リミット値が-1の場合は常時falseを返す
-            if (limitConfig.getLimit() == -1)
-                return false;
+        // リミット値が-1の場合は常時falseを返す
+        if (limitConfig.getLimit() == -1)
+            return false;
 
-            // チャンク内の対象となるエンティティの数を計算する
-            var targetEntityInChunkNumber = Arrays.stream(chunk.getEntities())
-                    .filter(target -> !EXCLUDE_ENTITY.contains(target.getType()))
-                    .count();
+        // チャンク内の対象となるエンティティの数を計算する
+        var targetEntityInChunkNumber = Arrays.stream(chunk.getEntities())
+                .filter(target -> !EXCLUDE_ENTITY.contains(target.getType()))
+                .count();
 
-            // チャンク内にリミット数以上エンティティが存在する場合trueを返す
-            if (targetEntityInChunkNumber > limitConfig.getLimit())
-                return true;
-        }
+        // チャンク内にリミット数以上エンティティが存在する場合trueを返す
+        if (targetEntityInChunkNumber > limitConfig.getLimit())
+            return true;
 
         // いずれにも当てはまらない場合false
         return false;
