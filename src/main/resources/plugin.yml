@@ -1,0 +1,8 @@
+name: ChunkMobLimiter
+version: '${version}'
+main: page.nafuchoco.chunkmoblimiter.ChunkMobLimiter
+api-version: 1.18
+prefix: MobLimiter
+authors: [ NAFU_at ]
+description: Limit the number of mobs that can spawn in a single chunk.
+website: https://hideaway.chocotto.studio/

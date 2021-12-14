@@ -1,0 +1,27 @@
+properties:
+  # チャンクのロード時にチャンク内のエンティティをチェックします (v0.1.0時点で未実装です)
+  checkChunkLoad: false
+
+  # チャンクのアンロード時にチャンク内のエンティティをチェックします (v0.1.0時点で未実装です)
+  checkChunkUnload: false
+
+  # 繁殖によるMobスポーンを制限する
+  limitBreeding: false
+
+  # リミット対象から除外するワールド
+  excludeWorld: [ ]
+
+# エンティティごとの1チャンクあたりの制限設定
+limits:
+  # 下記に存在しないエンティティは以下の設定を適用する
+  default:
+    limit: -1 # -1を指定することで制限を行いません。
+
+  # エンティティグループを作ることで一括で設定する事ができます。
+  group:
+    limit: -1 # グループ内のエンティティの合計数でリミットします。
+    entities: # グループ化するエンティティを指定します。
+      - ZOMBIE
+      - SKELETON
+      - CREEPER
+      - SPIDER
