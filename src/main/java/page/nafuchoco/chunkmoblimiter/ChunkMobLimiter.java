@@ -18,6 +18,7 @@ package page.nafuchoco.chunkmoblimiter;
 
 import lombok.val;
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Mob;
 import org.bukkit.event.EventHandler;
@@ -28,7 +29,6 @@ import org.bukkit.event.world.ChunkLoadEvent;
 import org.bukkit.event.world.ChunkUnloadEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Arrays;
 import java.util.Comparator;
 
 public final class ChunkMobLimiter extends JavaPlugin implements Listener {
@@ -99,20 +99,20 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
                 || !config.getTargetWorld().contains(chunk.getWorld().getName()))
             return false;
 
-        // 個別リミットの設定がない場合、エンティティクラスグループからリミット値の一番小さいものを取得する
-        if (limitConfig == null) {
-            limitConfig = config.getEntityGroupLimits().stream()
-                    .filter(limit -> getEntityClass(limit.getEntityType()).isInstance(entity))
-                    .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
-                    .findFirst().orElse(null);
-        }
-
         // 個別リミット設定，エンティティクラスグループ設定がない場合、対象のエンティティが所属するグループからリミット値の一番小さいものを取得する
         if (limitConfig == null) {
             limitConfig = config.getGroupLimits().stream()
                     .filter(group -> group.getGroupEntityList().contains(entityType.toString()))
-                    .sorted(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
-                    .findFirst().orElse(null);
+                    .min(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
+                    .orElse(null);
+        }
+
+        // 個別リミットの設定がない場合、エンティティクラスグループからリミット値の一番小さいものを取得する
+        if (limitConfig == null) {
+            limitConfig = config.getEntityGroupLimits().stream()
+                    .filter(limit -> getEntityClass(limit.getEntityType()).isInstance(entity))
+                    .min(Comparator.comparingInt(ChunkMobLimiterConfig.LimitConfig::getLimit))
+                    .orElse(null);
         }
 
         // いずれのリミット設定もない場合はデフォルトを適用する
@@ -124,9 +124,7 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
             return false;
 
         // チャンク内の対象となるエンティティの数を計算する
-        var targetEntityInChunkNumber = Arrays.stream(chunk.getEntities())
-                .filter(Mob.class::isInstance)
-                .count();
+        var targetEntityInChunkNumber = countTargetEntityInChunk(chunk, limitConfig);
 
         if (config.isDebug())
             getLogger().info("[Debug] Check Limit(EntityType:" + entityType
@@ -136,11 +134,25 @@ public final class ChunkMobLimiter extends JavaPlugin implements Listener {
                     + ", isLimit: " + (targetEntityInChunkNumber > limitConfig.getLimit()) + ")");
 
         // チャンク内にリミット数以上エンティティが存在する場合trueを返す
-        if (targetEntityInChunkNumber > limitConfig.getLimit())
-            return true;
-
         // いずれにも当てはまらない場合false
-        return false;
+        return targetEntityInChunkNumber > limitConfig.getLimit();
+    }
+
+    private int countTargetEntityInChunk(Chunk chunk, ChunkMobLimiterConfig.LimitConfig limitConfig) {
+        int count = 0;
+        for (Entity entity : chunk.getEntities()) {
+            if (limitConfig.getEntityType().startsWith("$") && getEntityClass(limitConfig.getEntityType()).isInstance(entity)) {
+                count++;
+            } else if (limitConfig.isGroup()) {
+                if (limitConfig.getGroupEntityList().contains(entity.getType().toString()))
+                    count++;
+            } else {
+                if (entity.getType().toString().equals(limitConfig.getEntityType()))
+                    count++;
+            }
+        }
+
+        return count;
     }
 
     private Class getEntityClass(String classname) {
